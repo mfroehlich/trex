@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_0hjn3b2">
+    <bpmn:participant id="Participant_rkaService" processRef="Process_rka" />
+    <bpmn:participant id="Participant_185kjeu" processRef="Process_1ynlgqi" />
+    <bpmn:messageFlow id="MessageFlow_rkaCreated" sourceRef="UserTask_1i1ic6t" targetRef="StartEvent_rkaWorkflowInitialized" />
+    <bpmn:messageFlow id="MessageFlow_rkaFinalized" sourceRef="UserTask_0we4a68" targetRef="UserTask_createRka" />
+    <bpmn:messageFlow id="MessageFlow_rkaRefused" sourceRef="SendTask_refuseRka" targetRef="ReceiveTask_0nhm47u" />
+    <bpmn:messageFlow id="MessageFlow_rkaAccepted" sourceRef="EndEvent_rkaAccepted" targetRef="ReceiveTask_0nhm47u" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_rka" name="Process_rka" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_rkaWorkflowInitialized">
+      <bpmn:outgoing>SequenceFlow_1ns87v7</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1ns87v7" sourceRef="StartEvent_rkaWorkflowInitialized" targetRef="UserTask_createRka" />
+    <bpmn:sequenceFlow id="SequenceFlow_1eh0ovg" sourceRef="SendTask_refuseRka" targetRef="UserTask_createRka" />
+    <bpmn:sequenceFlow id="SequenceFlow_0vdpzkc" sourceRef="UserTask_createRka" targetRef="ServiceTask_autoCheckRka" />
+    <bpmn:userTask id="UserTask_createRka" name="Abrechnung erfassen">
+      <bpmn:incoming>SequenceFlow_1ns87v7</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_1eh0ovg</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0vdpzkc</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="ExclusiveGateway_manualCheckRkaSuccessful" name="Manuelle Prüfung erfolgreich?">
+      <bpmn:incoming>SequenceFlow_12izbn8</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_manualCheckSuccessful</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_manualCheckNotSuccessful</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_rkaAccepted">
+      <bpmn:incoming>SequenceFlow_manualCheckSuccessful</bpmn:incoming>
+      <bpmn:messageEventDefinition camunda:class="com.prodyna.AcceptRkaDelegate" />
+    </bpmn:endEvent>
+    <bpmn:userTask id="UserTask_manualCheckRka" name="Abrechnung manuell prüfen">
+      <bpmn:incoming>SequenceFlow_autoCheckRkaSuccessful</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_12izbn8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="ExclusiveGateway_autoCheckRkaSuccessful" name="Automatisierte Prüfung erfolgreich">
+      <bpmn:incoming>SequenceFlow_0glvyv4</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_autoCheckRkaSuccessful</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_autoCheckRkaNotSuccessful</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="SendTask_refuseRka" name="Abrechnung ablehnen" camunda:class="com.prodyna.RefuseRkaDelegate">
+      <bpmn:incoming>SequenceFlow_manualCheckNotSuccessful</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_autoCheckRkaNotSuccessful</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1eh0ovg</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sequenceFlow id="SequenceFlow_12izbn8" sourceRef="UserTask_manualCheckRka" targetRef="ExclusiveGateway_manualCheckRkaSuccessful" />
+    <bpmn:sequenceFlow id="SequenceFlow_manualCheckSuccessful" name="ja" sourceRef="ExclusiveGateway_manualCheckRkaSuccessful" targetRef="EndEvent_rkaAccepted">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{manualCheckRkaSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_manualCheckNotSuccessful" name="nein" sourceRef="ExclusiveGateway_manualCheckRkaSuccessful" targetRef="SendTask_refuseRka">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{!manualCheckRkaSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_autoCheckRkaSuccessful" name="ja" sourceRef="ExclusiveGateway_autoCheckRkaSuccessful" targetRef="UserTask_manualCheckRka">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{autoCheckRkaSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_autoCheckRkaNotSuccessful" name="nein" sourceRef="ExclusiveGateway_autoCheckRkaSuccessful" targetRef="SendTask_refuseRka">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{!autoCheckRkaSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_0glvyv4" sourceRef="ServiceTask_autoCheckRka" targetRef="ExclusiveGateway_autoCheckRkaSuccessful" />
+    <bpmn:serviceTask id="ServiceTask_autoCheckRka" name="Abrechnung automatisiert prüfen" camunda:class="com.prodyna.AutoCheckRkaDelegate">
+      <bpmn:incoming>SequenceFlow_0vdpzkc</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0glvyv4</bpmn:outgoing>
+    </bpmn:serviceTask>
+  </bpmn:process>
+  <bpmn:process id="Process_1ynlgqi">
+    <bpmn:startEvent id="StartEvent_06shga3">
+      <bpmn:outgoing>SequenceFlow_0xlc6wo</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_0xlc6wo" sourceRef="StartEvent_06shga3" targetRef="UserTask_1i1ic6t" />
+    <bpmn:sequenceFlow id="SequenceFlow_0dj5rg3" sourceRef="UserTask_1i1ic6t" targetRef="UserTask_0we4a68" />
+    <bpmn:sequenceFlow id="SequenceFlow_0dukbpt" sourceRef="UserTask_0we4a68" targetRef="ReceiveTask_0nhm47u" />
+    <bpmn:exclusiveGateway id="ExclusiveGateway_0s87ozz" name="Abrechnung akzeptiert?">
+      <bpmn:incoming>SequenceFlow_06hhz0r</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1011qax</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_rkaAccepted</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="SequenceFlow_06hhz0r" sourceRef="ReceiveTask_0nhm47u" targetRef="ExclusiveGateway_0s87ozz" />
+    <bpmn:endEvent id="EndEvent_1d6paap">
+      <bpmn:incoming>SequenceFlow_1011qax</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1011qax" name="ja" sourceRef="ExclusiveGateway_0s87ozz" targetRef="EndEvent_1d6paap">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{rkaAccepted}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_rkaAccepted" name="nein" sourceRef="ExclusiveGateway_0s87ozz" targetRef="UserTask_0eq65iu">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{!rkaAccepted}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_0rodj2m" sourceRef="UserTask_0eq65iu" targetRef="UserTask_0we4a68" />
+    <bpmn:userTask id="UserTask_1i1ic6t" name="Abrechnung erfassen">
+      <bpmn:incoming>SequenceFlow_0xlc6wo</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0dj5rg3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="UserTask_0we4a68" name="Abrechnung einreichen">
+      <bpmn:incoming>SequenceFlow_0dj5rg3</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_0rodj2m</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0dukbpt</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:receiveTask id="ReceiveTask_0nhm47u" name="Ergebnis abwarten">
+      <bpmn:incoming>SequenceFlow_0dukbpt</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_06hhz0r</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:userTask id="UserTask_0eq65iu" name="Abrechnung überarbeiten">
+      <bpmn:incoming>SequenceFlow_rkaAccepted</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0rodj2m</bpmn:outgoing>
+    </bpmn:userTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0hjn3b2">
+      <bpmndi:BPMNShape id="Participant_1ysex6s_di" bpmnElement="Participant_rkaService">
+        <dc:Bounds x="137" y="29" width="1084" height="308" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ExclusiveGateway_1sd0w55_di" bpmnElement="ExclusiveGateway_manualCheckRkaSuccessful" isMarkerVisible="true">
+        <dc:Bounds x="1011" y="229" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="991" y="279" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_1no2t6z_di" bpmnElement="UserTask_createRka">
+        <dc:Bounds x="295" y="214" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_rkaWorkflowInitialized">
+        <dc:Bounds x="187" y="236" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="272" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_0ts2v17_di" bpmnElement="UserTask_manualCheckRka">
+        <dc:Bounds x="828" y="214" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SendTask_04pe4ia_di" bpmnElement="SendTask_refuseRka">
+        <dc:Bounds x="607" y="50" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_12izbn8_di" bpmnElement="SequenceFlow_12izbn8">
+        <di:waypoint xsi:type="dc:Point" x="928" y="254" />
+        <di:waypoint xsi:type="dc:Point" x="1011" y="254" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="927" y="244" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_107hute_di" bpmnElement="SequenceFlow_manualCheckSuccessful">
+        <di:waypoint xsi:type="dc:Point" x="1061" y="254" />
+        <di:waypoint xsi:type="dc:Point" x="1162" y="254" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1066.5" y="244" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0wqmx1t_di" bpmnElement="SequenceFlow_manualCheckNotSuccessful">
+        <di:waypoint xsi:type="dc:Point" x="1036" y="229" />
+        <di:waypoint xsi:type="dc:Point" x="1036" y="90" />
+        <di:waypoint xsi:type="dc:Point" x="707" y="90" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="991" y="149" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1ns87v7_di" bpmnElement="SequenceFlow_1ns87v7">
+        <di:waypoint xsi:type="dc:Point" x="223" y="254" />
+        <di:waypoint xsi:type="dc:Point" x="295" y="254" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="236.5" y="236" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1eh0ovg_di" bpmnElement="SequenceFlow_1eh0ovg">
+        <di:waypoint xsi:type="dc:Point" x="607" y="90" />
+        <di:waypoint xsi:type="dc:Point" x="345" y="90" />
+        <di:waypoint xsi:type="dc:Point" x="345" y="214" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="435" y="157.5" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0vdpzkc_di" bpmnElement="SequenceFlow_0vdpzkc">
+        <di:waypoint xsi:type="dc:Point" x="395" y="254" />
+        <di:waypoint xsi:type="dc:Point" x="467" y="254" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="637" y="240" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_1f6z7lb_di" bpmnElement="EndEvent_rkaAccepted">
+        <dc:Bounds x="1162" y="236" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1135" y="272" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ExclusiveGateway_0kamogs_di" bpmnElement="ExclusiveGateway_autoCheckRkaSuccessful" isMarkerVisible="true">
+        <dc:Bounds x="632.417004048583" y="229" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="612.417004048583" y="279" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1k7ovgl_di" bpmnElement="SequenceFlow_autoCheckRkaSuccessful">
+        <di:waypoint xsi:type="dc:Point" x="682" y="254" />
+        <di:waypoint xsi:type="dc:Point" x="828" y="254" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="710" y="244" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_13zfs2m_di" bpmnElement="SequenceFlow_autoCheckRkaNotSuccessful">
+        <di:waypoint xsi:type="dc:Point" x="657" y="229" />
+        <di:waypoint xsi:type="dc:Point" x="657" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="612" y="169.5" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0glvyv4_di" bpmnElement="SequenceFlow_0glvyv4">
+        <di:waypoint xsi:type="dc:Point" x="567" y="254" />
+        <di:waypoint xsi:type="dc:Point" x="632" y="254" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="554.5" y="244" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ServiceTask_0xcwa1q_di" bpmnElement="ServiceTask_autoCheckRka">
+        <dc:Bounds x="467.33333333333326" y="214" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_185kjeu_di" bpmnElement="Participant_185kjeu">
+        <dc:Bounds x="128" y="-425" width="1087" height="344" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_06shga3_di" bpmnElement="StartEvent_06shga3">
+        <dc:Bounds x="194.3630229419703" y="-181.6356275303644" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="167.3630229419703" y="-145.6356275303644" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0xlc6wo_di" bpmnElement="SequenceFlow_0xlc6wo">
+        <di:waypoint xsi:type="dc:Point" x="230" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="264" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="264" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="298" y="-164" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="219" y="-168.5" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0dj5rg3_di" bpmnElement="SequenceFlow_0dj5rg3">
+        <di:waypoint xsi:type="dc:Point" x="398" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="518" y="-164" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="394" y="-168.5" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0dukbpt_di" bpmnElement="SequenceFlow_0dukbpt">
+        <di:waypoint xsi:type="dc:Point" x="618" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="725" y="-164" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="607" y="-174" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ExclusiveGateway_0s87ozz_di" bpmnElement="ExclusiveGateway_0s87ozz" isMarkerVisible="true">
+        <dc:Bounds x="919.3630229419703" y="-189" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="899.3630229419703" y="-139" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_06hhz0r_di" bpmnElement="SequenceFlow_06hhz0r">
+        <di:waypoint xsi:type="dc:Point" x="825" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="919" y="-164" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="827" y="-174" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_1d6paap_di" bpmnElement="EndEvent_1d6paap">
+        <dc:Bounds x="1070.3630229419703" y="-182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1043.3630229419703" y="-146" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1011qax_di" bpmnElement="SequenceFlow_1011qax">
+        <di:waypoint xsi:type="dc:Point" x="969" y="-164" />
+        <di:waypoint xsi:type="dc:Point" x="1070" y="-164" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="974.5" y="-174" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_14wt00a_di" bpmnElement="SequenceFlow_rkaAccepted">
+        <di:waypoint xsi:type="dc:Point" x="944" y="-189" />
+        <di:waypoint xsi:type="dc:Point" x="944" y="-353" />
+        <di:waypoint xsi:type="dc:Point" x="398" y="-353" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="920" y="-294.5" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0rodj2m_di" bpmnElement="SequenceFlow_0rodj2m">
+        <di:waypoint xsi:type="dc:Point" x="348" y="-313" />
+        <di:waypoint xsi:type="dc:Point" x="348" y="-257" />
+        <di:waypoint xsi:type="dc:Point" x="568" y="-257" />
+        <di:waypoint xsi:type="dc:Point" x="568" y="-206" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="564" y="-294.5" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="UserTask_1i1ic6t_di" bpmnElement="UserTask_1i1ic6t">
+        <dc:Bounds x="298.3630229419703" y="-203.6356275303644" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_0we4a68_di" bpmnElement="UserTask_0we4a68">
+        <dc:Bounds x="518.3630229419703" y="-204" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReceiveTask_0nhm47u_di" bpmnElement="ReceiveTask_0nhm47u">
+        <dc:Bounds x="725.3630229419703" y="-204" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_0eq65iu_di" bpmnElement="UserTask_0eq65iu">
+        <dc:Bounds x="298.36302294197026" y="-392.6356275303644" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="MessageFlow_14xwdce_di" bpmnElement="MessageFlow_rkaCreated">
+        <di:waypoint xsi:type="dc:Point" x="308" y="-124" />
+        <di:waypoint xsi:type="dc:Point" x="205" y="-23" />
+        <di:waypoint xsi:type="dc:Point" x="205" y="236" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="303" y="35" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_1f3ibsy_di" bpmnElement="MessageFlow_rkaFinalized">
+        <di:waypoint xsi:type="dc:Point" x="518" y="-136" />
+        <di:waypoint xsi:type="dc:Point" x="316" y="-20" />
+        <di:waypoint xsi:type="dc:Point" x="316" y="213" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="497.5" y="35" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_13qjd1e_di" bpmnElement="MessageFlow_rkaRefused">
+        <di:waypoint xsi:type="dc:Point" x="657" y="50" />
+        <di:waypoint xsi:type="dc:Point" x="657" y="-13" />
+        <di:waypoint xsi:type="dc:Point" x="775" y="-13" />
+        <di:waypoint xsi:type="dc:Point" x="775" y="-124" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="671" y="-47" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_07ir5a1_di" bpmnElement="MessageFlow_rkaAccepted">
+        <di:waypoint xsi:type="dc:Point" x="1180" y="236" />
+        <di:waypoint xsi:type="dc:Point" x="1180" y="-13" />
+        <di:waypoint xsi:type="dc:Point" x="775" y="-13" />
+        <di:waypoint xsi:type="dc:Point" x="775" y="-124" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="932.5" y="46" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
